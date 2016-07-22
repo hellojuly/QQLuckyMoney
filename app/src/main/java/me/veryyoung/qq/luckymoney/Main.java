@@ -35,24 +35,35 @@ import static de.robv.android.xposed.XposedHelpers.findFirstFieldByExactType;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
 import static de.robv.android.xposed.XposedHelpers.setObjectField;
 
-
+/**
+ * com.tencent.mobileqq.data.MessageRecord              QQ消息
+ * com.tencent.mobileqq.data.MessageForQQWalletMsg      QQ红包消息
+ *
+ */
 public class Main implements IXposedHookLoadPackage {
 
     private static final String QQ_PACKAGE_NAME = "com.tencent.mobileqq";
     private static final String WECHAT_PACKAGE_NAME = "com.tencent.mm";
 
+    //MessageHandlerUtils
+    static long msgUid;//消息id
+    static String senderuin;//发送者uin
+    static String frienduin;//朋友的uin
+    static int istroop;//群
+    static String selfuin;//自己的uin
 
-    static long msgUid;
-    static String senderuin;
-    static String frienduin;
-    static int istroop;
-    static String selfuin;
+    //SplashActivity
     static Context globalContext = null;
+    //HotChatManager
     static Object HotChatManager = null;
-    static Object TicketManager;
+    //TicketManagerImpl
+    static Object TicketManager;//时钟->负责定时动态加解密的
 
     private void dohook(final XC_LoadPackage.LoadPackageParam loadPackageParam) {
 
+        /**
+         * 获取配置参数
+         */
         findAndHookMethod("com.tencent.mobileqq.app.MessageHandlerUtils", loadPackageParam.classLoader, "a",
                 "com.tencent.mobileqq.app.QQAppInterface",
                 "com.tencent.mobileqq.data.MessageRecord", Boolean.TYPE, new XC_MethodHook() {
@@ -62,7 +73,7 @@ public class Main implements IXposedHookLoadPackage {
                             return;
                         }
                         int msgtype = (int) getObjectField(param.args[1], "msgtype");
-                        if (msgtype == -2025) {
+                        if (msgtype == -2025) {//QQ红包消息MSG_TYPE_QQWALLET_MSG
                             msgUid = (long) getObjectField(param.args[1], "msgUid");
                             senderuin = (String) getObjectField(param.args[1], "senderuin");
                             frienduin = getObjectField(param.args[1], "frienduin").toString();
@@ -74,6 +85,9 @@ public class Main implements IXposedHookLoadPackage {
 
         );
 
+        /**
+         * 解析红包消息
+         */
         findAndHookMethod("com.tencent.mobileqq.data.MessageForQQWalletMsg", loadPackageParam.classLoader, "doParse", new
                 XC_MethodHook() {
                     @Override
@@ -92,6 +106,7 @@ public class Main implements IXposedHookLoadPackage {
                         Object mQQWalletRedPacketMsg = getObjectField(param.thisObject, "mQQWalletRedPacketMsg");
                         String redPacketId = getObjectField(mQQWalletRedPacketMsg, "redPacketId").toString();
                         String authkey = (String) getObjectField(mQQWalletRedPacketMsg, "authkey");
+                        //PluginStatic.getOrCreateClassLoader(Context context, String pluginID)
                         ClassLoader walletClassLoader = (ClassLoader) callStaticMethod(findClass("com.tencent.mobileqq.pluginsdk.PluginStatic", loadPackageParam.classLoader), "getOrCreateClassLoader", globalContext, "qwallet_plugin.apk");
                         StringBuffer requestUrl = new StringBuffer();
                         requestUrl.append("&uin=" + selfuin);
@@ -131,7 +146,9 @@ public class Main implements IXposedHookLoadPackage {
 
         );
 
-
+        /**
+         * 开屏页
+         */
         findAndHookMethod("com.tencent.mobileqq.activity.SplashActivity", loadPackageParam.classLoader, "doOnCreate", Bundle.class, new
 
                 XC_MethodHook() {
@@ -167,7 +184,9 @@ public class Main implements IXposedHookLoadPackage {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         Intent intent = (Intent) callMethod(param.thisObject, "getIntent");
+                        //PluginStatic.a(Context context, String pluginLocation, String pluginPath);
                         ClassLoader classLoader = (ClassLoader) callStaticMethod(findClass("com.tencent.mobileqq.pluginsdk.PluginStatic", loadPackageParam.classLoader), "a", param.thisObject, getObjectField(param.thisObject, "k").toString(), getObjectField(param.thisObject, "i").toString());
+                        //动态代理插件加载的是抢红包界面
                         if (intent.getStringExtra("pluginsdk_launchActivity").equals("com.tenpay.android.qqplugin.activity.GrapHbActivity")) {
                             findAndHookMethod("com.tenpay.android.qqplugin.activity.GrapHbActivity", classLoader, "a", JSONObject.class,
                                     new XC_MethodHook() {
@@ -257,7 +276,10 @@ public class Main implements IXposedHookLoadPackage {
 
     }
 
-
+    /**
+     * 将此APP从列表中隐藏
+     * @param loadPackageParam
+     */
     private void hideModule(XC_LoadPackage.LoadPackageParam loadPackageParam) {
         findAndHookMethod("android.app.ApplicationPackageManager", loadPackageParam.classLoader, "getInstalledApplications", int.class, new XC_MethodHook() {
             @Override
