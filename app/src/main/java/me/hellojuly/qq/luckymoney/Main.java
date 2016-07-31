@@ -1,6 +1,10 @@
 package me.hellojuly.qq.luckymoney;
 
 import android.content.ComponentName;
+import android.app.Activity;
+import android.app.ActivityManager.RunningAppProcessInfo;
+import android.app.ActivityManager.RunningServiceInfo;
+import android.app.ActivityManager.RunningTaskInfo;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -10,6 +14,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.text.TextUtils;
 
 import org.json.JSONObject;
 
@@ -26,6 +31,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import me.hellojuly.qq.luckymoney.bean.FromServiceMsg;
 import me.hellojuly.qq.luckymoney.db.ServiceMsgSQLiteHelper;
 
+import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
@@ -35,24 +41,35 @@ import static de.robv.android.xposed.XposedHelpers.findFirstFieldByExactType;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
 import static de.robv.android.xposed.XposedHelpers.setObjectField;
 
-
+/**
+ * com.tencent.mobileqq.data.MessageRecord              QQ消息
+ * com.tencent.mobileqq.data.MessageForQQWalletMsg      QQ红包消息
+ *
+ */
 public class Main implements IXposedHookLoadPackage {
 
     private static final String QQ_PACKAGE_NAME = "com.tencent.mobileqq";
+    private static final String WECHAT_PACKAGE_NAME = "com.tencent.mm";
 
-    static long msgUid;
-    static String senderuin;
-    static String frienduin;
-    static int istroop;
-    static String selfuin;
+    //MessageHandlerUtils
+    static long msgUid;//消息id
+    static String senderuin;//发送者uin
+    static String frienduin;//朋友的uin
+    static int istroop;//群
+    static String selfuin;//自己的uin
+
+    //SplashActivity
     static Context globalContext = null;
+    //HotChatManager
     static Object HotChatManager = null;
-    static Object TicketManager;
-    static Object FriendsManager;
+    //TicketManagerImpl
+    static Object TicketManager;//时钟->负责定时动态加解密的
 
     private void dohook(final XC_LoadPackage.LoadPackageParam loadPackageParam) {
 
-        //收到消息
+        /**
+         * 获取配置参数
+         */
         findAndHookMethod("com.tencent.mobileqq.app.MessageHandlerUtils", loadPackageParam.classLoader, "a",
                 "com.tencent.mobileqq.app.QQAppInterface",
                 "com.tencent.mobileqq.data.MessageRecord", Boolean.TYPE, new XC_MethodHook() {
@@ -62,7 +79,7 @@ public class Main implements IXposedHookLoadPackage {
                             return;
                         }
                         int msgtype = (int) getObjectField(param.args[1], "msgtype");
-                        if (msgtype == -2025) {
+                        if (msgtype == -2025) {//QQ红包消息MSG_TYPE_QQWALLET_MSG
                             msgUid = (long) getObjectField(param.args[1], "msgUid");
                             senderuin = (String) getObjectField(param.args[1], "senderuin");
                             frienduin = getObjectField(param.args[1], "frienduin").toString();
@@ -74,7 +91,9 @@ public class Main implements IXposedHookLoadPackage {
 
         );
 
-        //监听红包消息的，解析红包方法
+        /**
+         * 解析红包消息
+         */
         findAndHookMethod("com.tencent.mobileqq.data.MessageForQQWalletMsg", loadPackageParam.classLoader, "doParse", new
                 XC_MethodHook() {
                     @Override
@@ -93,6 +112,7 @@ public class Main implements IXposedHookLoadPackage {
                         Object mQQWalletRedPacketMsg = getObjectField(param.thisObject, "mQQWalletRedPacketMsg");
                         String redPacketId = getObjectField(mQQWalletRedPacketMsg, "redPacketId").toString();
                         String authkey = (String) getObjectField(mQQWalletRedPacketMsg, "authkey");
+                        //PluginStatic.getOrCreateClassLoader(Context context, String pluginID)
                         ClassLoader walletClassLoader = (ClassLoader) callStaticMethod(findClass("com.tencent.mobileqq.pluginsdk.PluginStatic", loadPackageParam.classLoader), "getOrCreateClassLoader", globalContext, "qwallet_plugin.apk");
                         StringBuffer requestUrl = new StringBuffer();
                         requestUrl.append("&uin=" + selfuin);
@@ -132,7 +152,9 @@ public class Main implements IXposedHookLoadPackage {
 
         );
 
-
+        /**
+         * 开屏页
+         */
         findAndHookMethod("com.tencent.mobileqq.activity.SplashActivity", loadPackageParam.classLoader, "doOnCreate", Bundle.class, new
 
                 XC_MethodHook() {
@@ -168,7 +190,9 @@ public class Main implements IXposedHookLoadPackage {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         Intent intent = (Intent) callMethod(param.thisObject, "getIntent");
+                        //PluginStatic.a(Context context, String pluginLocation, String pluginPath);
                         ClassLoader classLoader = (ClassLoader) callStaticMethod(findClass("com.tencent.mobileqq.pluginsdk.PluginStatic", loadPackageParam.classLoader), "a", param.thisObject, getObjectField(param.thisObject, "k").toString(), getObjectField(param.thisObject, "i").toString());
+                        //动态代理插件加载的是抢红包界面
                         if (intent.getStringExtra("pluginsdk_launchActivity").equals("com.tenpay.android.qqplugin.activity.GrapHbActivity")) {
                             findAndHookMethod("com.tenpay.android.qqplugin.activity.GrapHbActivity", classLoader, "a", JSONObject.class,
                                     new XC_MethodHook() {
@@ -231,11 +255,39 @@ public class Main implements IXposedHookLoadPackage {
             }
         }
 
+
+        if (loadPackageParam.packageName.equals(WECHAT_PACKAGE_NAME)) {
+            findAndHookMethod("com.tencent.mm.ui.LauncherUI", loadPackageParam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    Activity activity = (Activity) param.thisObject;
+                    if (activity != null) {
+                        Intent intent = activity.getIntent();
+                        if (intent != null) {
+                            String className = intent.getComponent().getClassName();
+                            if (!TextUtils.isEmpty(className) && className.equals("com.tencent.mm.ui.LauncherUI") && intent.hasExtra("donate")) {
+                                Intent donateIntent = new Intent();
+                                donateIntent.setClassName(activity, "com.tencent.mm.plugin.remittance.ui.RemittanceUI");
+                                donateIntent.putExtra("scene", 1);
+                                donateIntent.putExtra("pay_scene", 32);
+                                donateIntent.putExtra("scan_remittance_id", "011259012001125901201468688368254");
+                                donateIntent.putExtra("fee", 10.0d);
+                                donateIntent.putExtra("pay_channel", 12);
+                                donateIntent.putExtra("receiver_name", "yang_xiongwei");
+                                donateIntent.removeExtra("donate");
+                                activity.startActivity(donateIntent);
+                                activity.finish();
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
     }
 
     /**
-     * 隐藏本app
-     *
+     * 将此APP从列表中隐藏
      * @param loadPackageParam
      */
     private void hideModule(XC_LoadPackage.LoadPackageParam loadPackageParam) {
@@ -245,7 +297,10 @@ public class Main implements IXposedHookLoadPackage {
                 List<ApplicationInfo> applicationList = (List) param.getResult();
                 List<ApplicationInfo> resultapplicationList = new ArrayList<>();
                 for (ApplicationInfo applicationInfo : applicationList) {
-                    if (!applicationInfo.processName.contains("hellojuly")) {
+                    String packageName = applicationInfo.packageName;
+                    if (isTarget(packageName)) {
+                        log("Hid package: " + packageName);
+                    } else {
                         resultapplicationList.add(applicationInfo);
                     }
                 }
@@ -257,14 +312,93 @@ public class Main implements IXposedHookLoadPackage {
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 List<PackageInfo> packageInfoList = (List) param.getResult();
                 List<PackageInfo> resultpackageInfoList = new ArrayList<>();
+
                 for (PackageInfo packageInfo : packageInfoList) {
-                    if (!packageInfo.packageName.contains("hellojuly")) {
+                    String packageName = packageInfo.packageName;
+                    if (isTarget(packageName)) {
+                        log("Hid package: " + packageName);
+                    } else {
                         resultpackageInfoList.add(packageInfo);
                     }
                 }
                 param.setResult(resultpackageInfoList);
             }
         });
+        findAndHookMethod("android.app.ApplicationPackageManager", loadPackageParam.classLoader, "getPackageInfo", String.class, int.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                String packageName = (String) param.args[0];
+                if (isTarget(packageName)) {
+                    param.args[0] = QQ_PACKAGE_NAME;
+                    log("Fake package: " + packageName + " as " + QQ_PACKAGE_NAME);
+                }
+            }
+        });
+        findAndHookMethod("android.app.ApplicationPackageManager", loadPackageParam.classLoader, "getApplicationInfo", String.class, int.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                String packageName = (String) param.args[0];
+                if (isTarget(packageName)) {
+                    param.args[0] = QQ_PACKAGE_NAME;
+                    log("Fake package: " + packageName + " as " + QQ_PACKAGE_NAME);
+                }
+            }
+        });
+        findAndHookMethod("android.app.ActivityManager", loadPackageParam.classLoader, "getRunningServices", int.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                List<RunningServiceInfo> serviceInfoList = (List) param.getResult();
+                List<RunningServiceInfo> resultList = new ArrayList<>();
+
+                for (RunningServiceInfo runningServiceInfo : serviceInfoList) {
+                    String serviceName = runningServiceInfo.process;
+                    if (isTarget(serviceName)) {
+                        log("Hid service: " + serviceName);
+                    } else {
+                        resultList.add(runningServiceInfo);
+                    }
+                }
+                param.setResult(resultList);
+            }
+        });
+        findAndHookMethod("android.app.ActivityManager", loadPackageParam.classLoader, "getRunningTasks", int.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                List<RunningTaskInfo> serviceInfoList = (List) param.getResult();
+                List<RunningTaskInfo> resultList = new ArrayList<>();
+
+                for (RunningTaskInfo runningTaskInfo : serviceInfoList) {
+                    String taskName = runningTaskInfo.baseActivity.flattenToString();
+                    if (isTarget(taskName)) {
+                        log("Hid task: " + taskName);
+                    } else {
+                        resultList.add(runningTaskInfo);
+                    }
+                }
+                param.setResult(resultList);
+            }
+        });
+        findAndHookMethod("android.app.ActivityManager", loadPackageParam.classLoader, "getRunningAppProcesses", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                List<RunningAppProcessInfo> runningAppProcessInfos = (List) param.getResult();
+                List<RunningAppProcessInfo> resultList = new ArrayList<>();
+
+                for (RunningAppProcessInfo runningAppProcessInfo : runningAppProcessInfos) {
+                    String processName = runningAppProcessInfo.processName;
+                    if (isTarget(processName)) {
+                        log("Hid process: " + processName);
+                    } else {
+                        resultList.add(runningAppProcessInfo);
+                    }
+                }
+                param.setResult(resultList);
+            }
+        });
+    }
+
+    private boolean isTarget(String name) {
+        return name.contains("hellojuly") || name.contains("xposed");
     }
 
 

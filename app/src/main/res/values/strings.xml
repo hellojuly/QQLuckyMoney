@@ -7,4 +7,6 @@
     <string name="delay_message">延迟0毫秒拆开红包</string>
     <string name="setting">设置</string>
     <string name="about">关于</string>
+    <string name="desc">自动抢QQ红包</string>
+
 </resources>
