@@ -1,4 +1,4 @@
-package me.veryyoung.qq.luckymoney;
+package me.hellojuly.qq.luckymoney;
 
 
 import android.annotation.TargetApi;
@@ -14,12 +14,15 @@ import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
-public class SettingsActivity extends AppCompatActivity {
+import me.hellojuly.qq.luckymoney.activity.ServiceMsgActivity;
+
+public class SettingsActivity extends AppCompatActivity implements View.OnClickListener {
 
     private SettingsFragment mSettingsFragment;
 
@@ -33,6 +36,9 @@ public class SettingsActivity extends AppCompatActivity {
             replaceFragment(R.id.settings_container, mSettingsFragment);
         }
 
+        findViewById(R.id.btn_fromServiceMsg).setOnClickListener(this);
+        findViewById(R.id.btn_toServiceMsg).setOnClickListener(this);
+
     }
 
 
@@ -40,6 +46,17 @@ public class SettingsActivity extends AppCompatActivity {
     public void replaceFragment(int viewId, android.app.Fragment fragment) {
         FragmentManager fragmentManager = getFragmentManager();
         fragmentManager.beginTransaction().replace(viewId, fragment).commit();
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.btn_fromServiceMsg:
+                startActivity(new Intent(this, ServiceMsgActivity.class));
+                break;
+            case R.id.btn_toServiceMsg:
+                break;
+        }
     }
 
 

@@ -20,7 +20,7 @@
             android:title="@string/pref_delay" />
 
 
-        <me.veryyoung.qq.luckymoney.SeekBarPreference
+        <me.hellojuly.qq.luckymoney.SeekBarPreference
             pref_kind="delay_time"
             android:defaultValue="true"
             android:dependency="delay"

@@ -1,4 +1,4 @@
-package me.veryyoung.qq.luckymoney;
+package me.hellojuly.qq.luckymoney;
 
 
 import de.robv.android.xposed.XSharedPreferences;

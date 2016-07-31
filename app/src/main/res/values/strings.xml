@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">QQ红包</string>
+    <string name="app_name">QQ红包-July</string>
     <string name="pref_open">抢红包</string>
     <string name="pref_delay">延时抢红包</string>
     <string name="pref_delay_time">延时时长</string>
