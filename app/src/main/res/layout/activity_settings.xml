@@ -12,13 +12,13 @@
             android:id="@+id/btn_fromServiceMsg"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="FromMsg" />
+            android:text="接收" />
 
         <Button
             android:id="@+id/btn_toServiceMsg"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ToMsg" />
+            android:text="发送" />
 
     </LinearLayout>
 

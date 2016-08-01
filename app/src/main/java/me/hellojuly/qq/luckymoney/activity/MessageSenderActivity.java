@@ -5,24 +5,29 @@ import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Loader;
 import android.database.Cursor;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.CursorAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import me.hellojuly.qq.luckymoney.MyApplication;
 import me.hellojuly.qq.luckymoney.R;
 import me.hellojuly.qq.luckymoney.bean.FromServiceMsg;
+import me.hellojuly.qq.luckymoney.bean.ToServiceMsg;
+import me.hellojuly.qq.luckymoney.db.DatabaseContext;
 import me.hellojuly.qq.luckymoney.db.ServiceMsgSQLiteHelper;
 
 /**
  * Created by July on 2016/7/31.
  */
-public class ServiceMsgActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+public class MessageSenderActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, AdapterView.OnItemLongClickListener,AdapterView.OnItemClickListener {
 
     private ListView lvMessage;
     private ServiceCursorAdapter mAdapter;
@@ -35,6 +40,8 @@ public class ServiceMsgActivity extends AppCompatActivity implements LoaderManag
         lvMessage = (ListView) findViewById(R.id.listView);
         mAdapter = new ServiceCursorAdapter(this, null, 0);
         lvMessage.setAdapter(mAdapter);
+        lvMessage.setOnItemLongClickListener(this);
+        lvMessage.setOnItemClickListener(this);
 
         getLoaderManager().initLoader(1, null, this);
     }
@@ -45,13 +52,49 @@ public class ServiceMsgActivity extends AppCompatActivity implements LoaderManag
     }
 
     @Override
-    public void onLoadFinished(android.content.Loader<Cursor> loader, Cursor data) {
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         mAdapter.swapCursor(data);
     }
 
     @Override
-    public void onLoaderReset(android.content.Loader<Cursor> loader) {
+    public void onLoaderReset(Loader<Cursor> loader) {
         mAdapter.swapCursor(null);
+    }
+
+    @Override
+    public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+        int appSeq = (int) mAdapter.getItem(position);
+        new SQLiteHelperAsync().execute(appSeq);
+        return true;
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        int appSeq = (int) mAdapter.getItem(position);
+        MessageToAndFromActivity.startAction(this, appSeq);
+    }
+
+    public class SQLiteHelperAsync extends AsyncTask<Integer, Void, Void> {
+
+        private ServiceMsgSQLiteHelper mServiceMsgSQLiteHelper;
+
+        public SQLiteHelperAsync() {
+            if (mServiceMsgSQLiteHelper == null) {
+                mServiceMsgSQLiteHelper = new ServiceMsgSQLiteHelper(new DatabaseContext(MyApplication.applicationContext));
+            }
+        }
+
+        @Override
+        protected Void doInBackground(Integer... params) {
+            mServiceMsgSQLiteHelper.deleteSender(params[0]);
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            mServiceMsgSQLiteHelper.close();
+        }
     }
 
     public static class MyCursorLoader extends CursorLoader {
@@ -60,7 +103,7 @@ public class ServiceMsgActivity extends AppCompatActivity implements LoaderManag
 
         public MyCursorLoader(Context context) {
             super(context);
-            mServiceMsgSQLiteHelper = new ServiceMsgSQLiteHelper(context);
+            mServiceMsgSQLiteHelper = new ServiceMsgSQLiteHelper(new DatabaseContext(context));
         }
 
         /**
@@ -68,7 +111,7 @@ public class ServiceMsgActivity extends AppCompatActivity implements LoaderManag
          */
         @Override
         protected Cursor onLoadInBackground() {
-            return mServiceMsgSQLiteHelper.query();
+            return mServiceMsgSQLiteHelper.querySendMsg();
         }
     }
 
@@ -86,8 +129,15 @@ public class ServiceMsgActivity extends AppCompatActivity implements LoaderManag
         @Override
         public void bindView(View view, Context context, Cursor cursor) {
             TextView tv_content = (TextView) view.findViewById(R.id.tv_content);
-            FromServiceMsg msg = FromServiceMsg.Impl.toBeanValues(cursor);
+            ToServiceMsg msg = ToServiceMsg.Impl.toBeanValues(cursor);
             tv_content.setText(msg.toString());
+        }
+
+        @Override
+        public Object getItem(int position) {
+            Cursor cursor = (Cursor) super.getItem(position);
+            ToServiceMsg msg = ToServiceMsg.Impl.toBeanValues(cursor);
+            return msg.appSeq;
         }
     }
 

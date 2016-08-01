@@ -2,7 +2,6 @@ package me.hellojuly.qq.luckymoney.bean;
 
 import android.content.ContentValues;
 import android.database.Cursor;
-import android.os.Bundle;
 import android.provider.BaseColumns;
 
 import com.alibaba.fastjson.JSON;
@@ -16,13 +15,21 @@ import java.util.Set;
 /**
  * Created by July on 2016/7/31.
  */
-public class FromServiceMsg {
+public class ToServiceMsg {
 
-    public int fromVersion;
+    public int toVersion;
     public int appId;
     public int appSeq;
     public int ssoSeq;
     public String uin;
+
+    public int uinType;
+    public boolean needResp;//需要响应
+    public boolean quickSendEnable;//快速发送
+    public int quickSendStrategy;//快速发送策略
+    public long sendTimeout;
+    public long timeout;
+    public String serviceName;
 
     public String serviceCmd;
     public String msfCommand;
@@ -30,34 +37,29 @@ public class FromServiceMsg {
     public HashMap attributes;
     public String extraData;
 
-    public int flag;
-    public int resultCode;
-    public String errorMsg;
-    public byte[] msgCookie;
-
     public Long time;
 
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append("FromServiceMsg{" +
-                "\n    fromVersion=" + fromVersion +
+        builder.append("ToServiceMsg{" +
+                "\n    toVersion=" + toVersion +
                 ",\n    appId=" + appId +
                 ",\n    appSeq=" + appSeq +
-                ",\n    flag=" + flag +
                 ",\n    ssoSeq=" + ssoSeq +
-                ",\n    resultCode=" + resultCode +
                 ",\n    uin='" + uin + '\'' +
-                ",\n    errorMsg='" + errorMsg + '\'' +
+                ",\n    uinType=" + uinType +
+                ",\n    needResp=" + needResp +
+                ",\n    quickSendEnable=" + quickSendEnable +
+                ",\n    quickSendStrategy=" + quickSendStrategy +
+                ",\n    sendTimeout=" + sendTimeout +
+                ",\n    timeout=" + timeout +
+                ",\n    serviceName='" + serviceName + '\'' +
                 ",\n    serviceCmd='" + serviceCmd + '\'' +
                 ",\n    msfCommand='" + msfCommand + '\'' +
                 ",\n    attributes=" + attributesToString() +
-                ",\n    extraData=" + extraData +
+                ",\n    extraData='" + extraData + '\'' +
                 ",\n    time=" + time);
-        try {
-            builder.append(",\n    msgCookie=" + new String(msgCookie, "UTF8"));
-        } catch (Exception e) {
-        }
         try {
             builder.append(",\n    wupBuffer=" + new String(wupBuffer, "UTF8"));
         } catch (Exception e) {
@@ -86,38 +88,47 @@ public class FromServiceMsg {
         private Impl() {
         }
 
-        public static final String COLUMN_FROM_VERSION = "fromVersion";
+        public static final String COLUMN_TO_VERSION = "toVersion";
         public static final String COLUMN_APP_ID = "appId";
         public static final String COLUMN_APP_SEQ = "appSeq";
-        public static final String COLUMN_FLAG = "flag";
         public static final String COLUMN_SSO_SEQ = "ssoSeq";
-        public static final String COLUMN_RESULT_CODE = "resultCode";
         public static final String COLUMN_UIN = "uin";
-        public static final String COLUMN_ERROR_MESSAGE = "errorMsg";
+
+        public static final String COLUMN_UIN_TYPE = "uinType";
+        public static final String COLUMN_NEED_RESP = "needResp";
+        public static final String COLUMN_QUICK_SEND_ENABLE = "quickSendEnable";
+        public static final String COLUMN_QUICK_SEND_STRATEGY = "quickSendStrategy";
+        public static final String COLUMN_SEND_TIMEOUT = "sendTimeout";
+        public static final String COLUMN_TIMEOUT = "timeout";
+        public static final String COLUMN_SERVICE_NAME = "serviceName";
+
         public static final String COLUMN_SERVICE_CMD = "serviceCmd";
         public static final String COLUMN_MSF_COMMAND = "msfCommand";
-        public static final String COLUMN_MSG_COOKIE = "msgCookie";
         public static final String COLUMN_WUP_BUFFER = "wupBuffer";
         public static final String COLUMN_ATTRIBUTES = "attributes";
         public static final String COLUMN_EXTRA_DATA = "extraData";
 
         public static final String COLUMN_TIME = "time";
 
-        public static FromServiceMsg toBeanValues(Cursor cursor) {
-            FromServiceMsg fromServiceMsg = new FromServiceMsg();
+        public static ToServiceMsg toBeanValues(Cursor cursor) {
+            ToServiceMsg fromServiceMsg = new ToServiceMsg();
             if (cursor == null) return fromServiceMsg;
-            fromServiceMsg.fromVersion = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_FROM_VERSION));
+            fromServiceMsg.toVersion = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_TO_VERSION));
             fromServiceMsg.appId = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_APP_ID));
             fromServiceMsg.appSeq = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_APP_SEQ));
-            fromServiceMsg.flag = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_FLAG));
             fromServiceMsg.ssoSeq = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_SSO_SEQ));
-            fromServiceMsg.resultCode = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_RESULT_CODE));
             fromServiceMsg.uin = cursor.getString(cursor.getColumnIndex(Impl.COLUMN_UIN));
-            fromServiceMsg.errorMsg = cursor.getString(cursor.getColumnIndex(Impl.COLUMN_ERROR_MESSAGE));
+
+            fromServiceMsg.uinType = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_UIN_TYPE));
+            fromServiceMsg.needResp = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_NEED_RESP)) == 1 ? true : false;
+            fromServiceMsg.quickSendEnable = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_QUICK_SEND_ENABLE)) == 1 ? true : false;
+            fromServiceMsg.quickSendStrategy = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_QUICK_SEND_STRATEGY));
+            fromServiceMsg.sendTimeout = cursor.getLong(cursor.getColumnIndex(Impl.COLUMN_SEND_TIMEOUT));
+            fromServiceMsg.timeout = cursor.getLong(cursor.getColumnIndex(Impl.COLUMN_TIMEOUT));
+            fromServiceMsg.serviceName = cursor.getString(cursor.getColumnIndex(Impl.COLUMN_SERVICE_NAME));
+
             fromServiceMsg.serviceCmd = cursor.getString(cursor.getColumnIndex(Impl.COLUMN_SERVICE_CMD));
             fromServiceMsg.msfCommand = cursor.getString(cursor.getColumnIndex(Impl.COLUMN_MSF_COMMAND));
-
-            fromServiceMsg.msgCookie = cursor.getString(cursor.getColumnIndex(Impl.COLUMN_MSG_COOKIE)).getBytes();
             fromServiceMsg.wupBuffer = cursor.getString(cursor.getColumnIndex(Impl.COLUMN_WUP_BUFFER)).getBytes();
             fromServiceMsg.attributes = JSON.parseObject(cursor.getString(cursor.getColumnIndex(Impl.COLUMN_ATTRIBUTES)), HashMap.class);
             fromServiceMsg.extraData = cursor.getString(cursor.getColumnIndex(Impl.COLUMN_EXTRA_DATA));
@@ -127,24 +138,25 @@ public class FromServiceMsg {
         }
 
         // 对象转字段,放入表中
-        public static ContentValues toContentValues(FromServiceMsg msg) {
+        public static ContentValues toContentValues(ToServiceMsg msg) {
             ContentValues values = new ContentValues();
-            values.put(COLUMN_FROM_VERSION, msg.fromVersion);
+            values.put(COLUMN_TO_VERSION, msg.toVersion);
             values.put(COLUMN_APP_ID, msg.appId);
             values.put(COLUMN_APP_SEQ, msg.appSeq);
-            values.put(COLUMN_FLAG, msg.flag);
             values.put(COLUMN_SSO_SEQ, msg.ssoSeq);
-            values.put(COLUMN_RESULT_CODE, msg.resultCode);
             values.put(COLUMN_UIN, msg.uin);
-            values.put(COLUMN_ERROR_MESSAGE, msg.errorMsg);
+
+            values.put(COLUMN_UIN_TYPE, msg.uinType);
+            values.put(COLUMN_NEED_RESP, msg.needResp ? 1 : 0);
+            values.put(COLUMN_QUICK_SEND_ENABLE, msg.quickSendEnable ? 1 : 0);
+            values.put(COLUMN_QUICK_SEND_STRATEGY, msg.quickSendStrategy);
+            values.put(COLUMN_SEND_TIMEOUT, msg.sendTimeout);
+            values.put(COLUMN_TIMEOUT, msg.timeout);
+            values.put(COLUMN_SERVICE_NAME, msg.serviceName);
+
             values.put(COLUMN_SERVICE_CMD, msg.serviceCmd);
             values.put(COLUMN_MSF_COMMAND, msg.msfCommand);
 
-            try {
-                values.put(COLUMN_MSG_COOKIE, new String(msg.msgCookie, "UTF8"));
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
             try {
                 values.put(COLUMN_WUP_BUFFER, new String(msg.wupBuffer, "UTF8"));
             } catch (UnsupportedEncodingException e) {
