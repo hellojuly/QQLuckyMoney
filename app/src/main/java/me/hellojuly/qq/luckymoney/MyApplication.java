@@ -5,6 +5,8 @@ import android.content.Context;
 
 import com.facebook.stetho.Stetho;
 
+import de.robv.android.xposed.XposedHelpers;
+
 /**
  * Created by July on 2016/7/31.
  */

@@ -18,6 +18,7 @@ import android.view.View;
 
 import me.hellojuly.qq.luckymoney.activity.MessageReceiverActivity;
 import me.hellojuly.qq.luckymoney.activity.MessageSenderActivity;
+import me.hellojuly.qq.luckymoney.activity.MessageSenderTableActivity;
 
 public class SettingsActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -35,6 +36,7 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
 
         findViewById(R.id.btn_fromServiceMsg).setOnClickListener(this);
         findViewById(R.id.btn_toServiceMsg).setOnClickListener(this);
+        findViewById(R.id.btn_senderTable).setOnClickListener(this);
 
         checkPermission();
     }
@@ -81,6 +83,9 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
                 break;
             case R.id.btn_toServiceMsg:
                 startActivity(new Intent(this, MessageSenderActivity.class));
+                break;
+            case R.id.btn_senderTable:
+                startActivity(new Intent(this, MessageSenderTableActivity.class));
                 break;
         }
     }
