@@ -22,6 +22,27 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_joinTroop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="加群" />
+
+        <EditText
+            android:id="@+id/et_troopNumber"
+            android:layout_width="180dp"
+            android:layout_height="wrap_content"
+            android:hint="群号"
+            android:text="548819528"
+            android:inputType="numberSigned"
+            android:textSize="14sp" />
+    </LinearLayout>
+
     <FrameLayout
         android:id="@+id/settings_container"
         android:layout_width="match_parent"

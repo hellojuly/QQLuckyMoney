@@ -13,6 +13,8 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.text.TextUtils;
+import android.widget.Toast;
 
 import org.json.JSONObject;
 
@@ -50,6 +52,7 @@ public class Main implements IXposedHookLoadPackage {
 
     private static final String QQ_PACKAGE_NAME = "com.tencent.mobileqq";
     private static final String WECHAT_PACKAGE_NAME = "com.tencent.mm";
+    private static final String SELF_PACKAGE_NAME = "me.hellojuly.qq.luckymoney";
 
     //MessageHandlerUtils
     static long msgUid;//消息id
@@ -64,6 +67,12 @@ public class Main implements IXposedHookLoadPackage {
     static Object HotChatManager = null;
     //TicketManagerImpl
     static Object TicketManager;//时钟->负责定时动态加解密的
+
+    static Object QQAppInterface = null;
+    Object addFriendVerifyActivity;
+    Object troopHandler;
+
+    boolean isJoin = true;
 
     private void dohook(final XC_LoadPackage.LoadPackageParam loadPackageParam) {
 
@@ -86,6 +95,8 @@ public class Main implements IXposedHookLoadPackage {
                             istroop = (int) getObjectField(param.args[1], "istroop");
                             selfuin = getObjectField(param.args[1], "selfuin").toString();
                         }
+
+                        runJoinTroop();
                     }
                 }
 
@@ -176,13 +187,22 @@ public class Main implements IXposedHookLoadPackage {
 
 
         findAndHookConstructor("com.tencent.mobileqq.app.HotChatManager", loadPackageParam.classLoader, "com.tencent.mobileqq.app.QQAppInterface", new
+                        XC_MethodHook() {
+                            @Override
+                            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                                HotChatManager = param.thisObject;
 
-                XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        HotChatManager = param.thisObject;
-                    }
-                }
+//                        Object object = param.args[0];
+//                        XposedBridge.log("--------------------------- Constructor HotChatManager null22 ---------------------------");
+//                        if (object == null && QQAppInterface == null) {
+//                            XposedBridge.log("--------------------------- Constructor HotChatManager null22 ---------------------------");
+//                        } else {
+//                            QQAppInterface = param.thisObject;
+//                            addFriendVerifyActivity = XposedHelpers.newInstance(findClass("com.tencent.mobileqq.activity.AddFriendVerifyActivity", loadPackageParam.classLoader));
+//                            troopHandler = XposedHelpers.newInstance(findClass("com.tencent.mobileqq.app.TroopHandler", loadPackageParam.classLoader), QQAppInterface);
+//                        }
+                            }
+                        }
 
         );
 
@@ -247,14 +267,23 @@ public class Main implements IXposedHookLoadPackage {
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         dohook(loadPackageParam);
                         hookQQSend(loadPackageParam);
+                        hookAddFriend(loadPackageParam);
+                        hookAccount(loadPackageParam);
                     }
                 });
             } else {
                 dohook(loadPackageParam);
                 hookQQSend(loadPackageParam);
+                hookAddFriend(loadPackageParam);
+                hookAccount(loadPackageParam);
             }
         }
 
+        //hook自己
+        if (loadPackageParam.packageName.equals(SELF_PACKAGE_NAME)) {
+            XposedBridge.log("packageName=" + loadPackageParam.packageName);
+            hookSelf(loadPackageParam);
+        }
 
 //        if (loadPackageParam.packageName.equals(WECHAT_PACKAGE_NAME)) {
 //            findAndHookMethod("com.tencent.mm.ui.LauncherUI", loadPackageParam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
@@ -284,6 +313,81 @@ public class Main implements IXposedHookLoadPackage {
 //            });
 //        }
 
+    }
+
+    /**
+     * hook 自己
+     *
+     * @param loadPackageParam
+     */
+    private void hookSelf(final XC_LoadPackage.LoadPackageParam loadPackageParam) {
+        findAndHookMethod("me.hellojuly.qq.luckymoney.SettingsActivity", loadPackageParam.classLoader, "joinTroopXposed",
+                int.class,
+                String.class,
+                String.class,
+                String.class,
+                int.class,
+                String.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+
+                        int k_i = (int) param.args[0];
+                        String k_str = (String) param.args[1];
+                        String content = (String) param.args[2];
+                        String troopNumber = (String) param.args[3];
+                        int optStat = (int) param.args[4];
+                        String picUrl = (String) param.args[5];
+
+
+                    }
+                });
+    }
+
+    private void runJoinTroop() {
+        if (!isJoin) return;
+
+        String troopNumber = "548819528";
+        String content = "我是xxx";
+        int optStat = 31;
+        String picUrl = null;
+        int k_i = 0;
+        String k_str = null;
+
+
+        String account = (String) callMethod(QQAppInterface, "getAccount");
+        XposedBridge.log("account=" + account);
+        if (TextUtils.isEmpty(account)) {
+            XposedBridge.log("QQ号不能为null");
+            return;
+        }
+        byte[] bytes = (byte[]) callMethod(addFriendVerifyActivity, "a", k_i, k_str, content, account, Long.parseLong(troopNumber));
+        callMethod(troopHandler, "a", troopNumber, content, optStat, bytes, picUrl);
+        isJoin = false;
+    }
+
+    /**
+     * hook 账号信息
+     *
+     * @param loadPackageParam
+     */
+    private void hookAccount(final XC_LoadPackage.LoadPackageParam loadPackageParam) {
+        findAndHookConstructor("com.tencent.mobileqq.app.QQAppInterface", loadPackageParam.classLoader,
+                "com.tencent.common.app.BaseApplicationImpl",
+                String.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        XposedBridge.log("--------------------------- Constructor QQAppInterface ---------------------------");
+                        if (param.thisObject == null) {
+                            XposedBridge.log("--------------------------- Constructor QQAppInterface null ---------------------------");
+                        } else {
+                            QQAppInterface = param.thisObject;
+                            addFriendVerifyActivity = XposedHelpers.newInstance(findClass("com.tencent.mobileqq.activity.AddFriendVerifyActivity", loadPackageParam.classLoader));
+                            troopHandler = XposedHelpers.newInstance(findClass("com.tencent.mobileqq.app.TroopHandler", loadPackageParam.classLoader), QQAppInterface);
+                        }
+                    }
+                });
     }
 
     /**
@@ -432,51 +536,11 @@ public class Main implements IXposedHookLoadPackage {
 
     //hook发送消息方法
     public void hookQQSend(XC_LoadPackage.LoadPackageParam loadPackageParam) {
-        //发送消息intent
-        findAndHookMethod("mqq.app.MSFServlet", loadPackageParam.classLoader, "service", "android.content.Intent", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                Intent intent = (Intent) param.args[0];
-                XposedBridge.log("------------------------------------------------------------------------------------");
-                XposedBridge.log("type=" + intent.getType());
-                XposedBridge.log("action=" + intent.getAction());
-                XposedBridge.log("dataString=" + intent.getDataString());
-                XposedBridge.log("scheme=" + intent.getScheme());
-                XposedBridge.log("package=" + intent.getPackage());
-
-
-                /**
-                 * TempServlet 普通消息
-                 * QZoneFeedsServlet QZone消息
-                 * QZoneNotifyServlet
-                 *
-                 *
-                 */
-                try {
-
-
-                    ComponentName componentName = intent.getComponent();
-                    XposedBridge.log("component=" + (componentName == null ? "null" : intent.getComponent().toString()));
-                    Uri uri = intent.getData();
-                    XposedBridge.log("dataUri=" + (uri == null ? "null" : uri.toString()));
-                    Bundle bundle = intent.getExtras();
-                    XposedBridge.log("extras=" + (bundle == null ? "null" : bundle.toString()));
-
-                    Parcelable parcelable = intent.getParcelableExtra("ToServiceMsg");
-                    if (parcelable != null)
-                        XposedBridge.log("ToServiceMsg=" + parcelable.toString());
-                    XposedBridge.log("------------------------------------------------------------------------------------");
-                } catch (Exception e) {
-                    XposedBridge.log("-Exception-----------------------------------------------------------------------------------");
-                }
-            }
-        });
 
         //发送消息体ToServiceMsg
         findAndHookMethod("com.tencent.mobileqq.msf.sdk.MsfServiceSdk", loadPackageParam.classLoader, "sendMsg", "com.tencent.qphone.base.remote.ToServiceMsg", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                XposedBridge.log("------------------------------------------------------------------------------------sendMsg");
                 Object toServiceMsg = param.args[0];
                 byte toVersion = (byte) getObjectField(toServiceMsg, "toVersion");
                 int appId = (int) getObjectField(toServiceMsg, "appId");
@@ -526,62 +590,11 @@ public class Main implements IXposedHookLoadPackage {
             }
         });
 
-
-//
-//        findAndHookMethod("com.tencent.mobileqq.app.MessageHandler", loadPackageParam.classLoader, "a",
-//                "com.tencent.qphone.base.remote.ToServiceMsg",
-//                "com.tencent.qphone.base.remote.FromServiceMsg",
-//                "java.lang.Object", new XC_MethodHook() {
-//                    @Override
-//                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-//
-//                        XposedBridge.log("------------------------------------------------------------------------------------onReceive1");
-//                        Object fromServiceMsg = param.args[1];
-//                        byte fromVersion = (byte) getObjectField(fromServiceMsg, "fromVersion");
-//                        int appId = (int) getObjectField(fromServiceMsg, "appId");
-//                        int appSeq = (int) getObjectField(fromServiceMsg, "appSeq");
-//                        int flag = (int) getObjectField(fromServiceMsg, "flag");
-//                        int resultCode = (int) getObjectField(fromServiceMsg, "resultCode");
-//                        int ssoSeq = (int) getObjectField(fromServiceMsg, "ssoSeq");
-//                        String errorMsg = (String) getObjectField(fromServiceMsg, "errorMsg");
-//                        String serviceCmd = (String) getObjectField(fromServiceMsg, "serviceCmd");
-//                        String uin = (String) getObjectField(fromServiceMsg, "uin");
-//                        byte[] msgCookie = (byte[]) getObjectField(fromServiceMsg, "msgCookie");
-//                        byte[] wupBufer = (byte[]) getObjectField(fromServiceMsg, "wupBuffer");
-//                        HashMap attributes = (HashMap) getObjectField(fromServiceMsg, "attributes");
-//                        Bundle extraData = (Bundle) getObjectField(fromServiceMsg, "extraData");
-//                        Object msfCommand = getObjectField(fromServiceMsg, "msfCommand");//指令枚举类
-//                        XposedBridge.log("------------------------------------------------------------------------------------onReceive2");
-//
-//                        //数据源
-//                        FromServiceMsg msg = new FromServiceMsg();
-//                        msg.fromVersion = fromVersion;
-//                        msg.appId = appId;
-//                        msg.appSeq = appSeq;
-//                        msg.flag = flag;
-//                        msg.resultCode = resultCode;
-//                        msg.ssoSeq = ssoSeq;
-//                        msg.errorMsg = errorMsg;
-//                        msg.serviceCmd = serviceCmd;
-//                        msg.uin = uin;
-//                        msg.msgCookie = msgCookie;
-//                        msg.wupBuffer = wupBufer;
-//                        msg.attributes = attributes;
-//                        msg.extraData = extraData;
-//                        msg.msfCommand = msfCommand.toString();
-//
-//                        XposedBridge.log("------------------------------------------------------------------------------------onReceive3");
-//                        new SQLiteHelperAsync().execute(msg);
-//                        XposedBridge.log("------------------------------------------------------------------------------------onReceive4");
-//                    }
-//                });
-//
-//
+        //接收消息
         findAndHookMethod("mqq.app.MSFServlet", loadPackageParam.classLoader, "onReceive", "com.tencent.qphone.base.remote.FromServiceMsg", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
 
-                XposedBridge.log("------------------------------------------------------------------------------------onReceive1");
                 Object fromServiceMsg = param.args[0];
                 byte fromVersion = (byte) getObjectField(fromServiceMsg, "fromVersion");
                 int appId = (int) getObjectField(fromServiceMsg, "appId");
@@ -597,7 +610,6 @@ public class Main implements IXposedHookLoadPackage {
                 HashMap attributes = (HashMap) getObjectField(fromServiceMsg, "attributes");
                 Bundle extraData = (Bundle) getObjectField(fromServiceMsg, "extraData");
                 Object msfCommand = getObjectField(fromServiceMsg, "msfCommand");//指令枚举类
-                XposedBridge.log("------------------------------------------------------------------------------------onReceive2");
 
                 //数据源
                 FromServiceMsg msg = new FromServiceMsg();
@@ -616,13 +628,159 @@ public class Main implements IXposedHookLoadPackage {
                 msg.extraData = extraData == null ? "" : extraData.toString();
                 msg.msfCommand = msfCommand.toString();
 
-                XposedBridge.log(msg.toString());
+//                XposedBridge.log(msg.toString());
                 try {
                     new ReceiverSQLiteHelperAsync().execute(msg);
                 } catch (Exception e) {
                 }
             }
         });
+    }
+
+
+    private void hookAddFriend(XC_LoadPackage.LoadPackageParam loadPackageParam) {
+
+        //TroopHandler处理加群消息
+        //String , String , int , String , byte[] , String
+        findAndHookMethod("com.tencent.mobileqq.app.TroopHandler", loadPackageParam.classLoader, "a",
+                String.class,
+                String.class,
+                int.class,
+                String.class,
+                byte[].class,
+                String.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+
+                        String troopUin = (String) param.args[0];
+                        String content = (String) param.args[1];
+                        int optStat = (int) param.args[2];
+                        String authKey = (String) param.args[3];
+                        byte[] bytes = (byte[]) param.args[4];
+                        String picUrl = (String) param.args[5];
+
+                        XposedBridge.log("-TroopHandler-----------------------------------------------------------------------------");
+                        XposedBridge.log("troopUin=" + troopUin);
+                        XposedBridge.log("content=" + content);
+                        XposedBridge.log("optStat=" + optStat);
+                        XposedBridge.log("authKey=" + authKey);
+                        XposedBridge.log("picUrl=" + picUrl);
+                        XposedBridge.log("bytes=" + (bytes == null ? 0 : bytes.length));
+                        XposedBridge.log("------------------------------------------------------------------------------");
+                    }
+                });
+
+        //AddFriendVerifyActivity处理加群消息
+        //int , String , String , long , long
+        findAndHookMethod("com.tencent.mobileqq.activity.AddFriendVerifyActivity", loadPackageParam.classLoader, "a",
+                int.class,
+                String.class,
+                String.class,
+                long.class,
+                long.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+
+                        int i_k = (int) param.args[0];
+                        String str_k = (String) param.args[1];
+                        String content = (String) param.args[2];
+                        long account = (long) param.args[3];
+                        long uni = (long) param.args[4];
+
+                        XposedBridge.log("-AddFriendVerifyActivity-----------------------------------------------------------------------------");
+                        XposedBridge.log("i_k=" + i_k);
+                        XposedBridge.log("str_k=" + str_k);
+                        XposedBridge.log("content=" + content);
+                        XposedBridge.log("account=" + account);
+                        XposedBridge.log("uni=" + uni);
+                        XposedBridge.log("------------------------------------------------------------------------------");
+                    }
+                });
+
+        //AddFriendLogicActivity处理加群消息
+        //Context context, String uin, String nickName, short groupOption, int optStat, String troopQuestion, String troopAnswer, String returnAddr, String lastActivity
+        findAndHookMethod("com.tencent.mobileqq.activity.AddFriendLogicActivity", loadPackageParam.classLoader, "a",
+                "android.content.Context",
+                String.class,
+                String.class,
+                short.class,
+                int.class,
+                String.class,
+                String.class,
+                String.class,
+                String.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+
+                        String uin = (String) param.args[1];
+                        String nickName = (String) param.args[2];
+                        short groupOption = (short) param.args[3];
+                        int optStat = (int) param.args[4];
+                        String troopQuestion = (String) param.args[5];
+                        String troopAnswer = (String) param.args[6];
+                        String returnAddr = (String) param.args[7];
+                        String lastActivity = (String) param.args[8];
+
+                        XposedBridge.log("-AddFriendLogicActivity not authkey-----------------------------------------------------------------------------");
+                        XposedBridge.log("uin=" + uin);
+                        XposedBridge.log("nickName=" + nickName);
+                        XposedBridge.log("groupOption=" + groupOption);
+                        XposedBridge.log("optStat=" + optStat);
+                        XposedBridge.log("troopQuestion=" + troopQuestion);
+                        XposedBridge.log("troopAnswer=" + troopAnswer);
+                        XposedBridge.log("returnAddr=" + returnAddr);
+                        XposedBridge.log("lastActivity=" + lastActivity);
+                        XposedBridge.log("------------------------------------------------------------------------------");
+                    }
+                });
+
+        //AddFriendLogicActivity处理加群消息
+        //Context context, String uin, String nickName, short groupOption, int optStat, String troopQuestion, String troopAnswer, String returnAddr, String lastActivity, String authKey
+        findAndHookMethod("com.tencent.mobileqq.activity.AddFriendLogicActivity", loadPackageParam.classLoader, "a",
+                "android.content.Context",
+                String.class,
+                String.class,
+                short.class,
+                int.class,
+                String.class,
+                String.class,
+                String.class,
+                String.class,
+                String.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+
+                        String uin = (String) param.args[1];
+                        String nickName = (String) param.args[2];
+                        short groupOption = (short) param.args[3];
+                        int optStat = (int) param.args[4];
+                        String troopQuestion = (String) param.args[5];
+                        String troopAnswer = (String) param.args[6];
+                        String returnAddr = (String) param.args[7];
+                        String lastActivity = (String) param.args[8];
+                        String authKey = (String) param.args[9];
+
+                        XposedBridge.log("-AddFriendLogicActivity has authkey-----------------------------------------------------------------------------");
+                        XposedBridge.log("uin=" + uin);
+                        XposedBridge.log("nickName=" + nickName);
+                        XposedBridge.log("groupOption=" + groupOption);
+                        XposedBridge.log("optStat=" + optStat);
+                        XposedBridge.log("troopQuestion=" + troopQuestion);
+                        XposedBridge.log("troopAnswer=" + troopAnswer);
+                        XposedBridge.log("returnAddr=" + returnAddr);
+                        XposedBridge.log("lastActivity=" + lastActivity);
+                        XposedBridge.log("authKey=" + authKey);
+                        XposedBridge.log("------------------------------------------------------------------------------");
+                    }
+                });
     }
 
     /**

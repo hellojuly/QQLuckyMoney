@@ -33,6 +33,11 @@ public class PreferencesUtils {
     public static int delayTime() {
         return getInstance().getInt("delay_time", 0);
     }
+
+    public static boolean getJoinTroop() {
+        return getInstance().getBoolean("joinTroop", true);
+    }
+
 }
 
 

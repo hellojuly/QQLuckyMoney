@@ -14,14 +14,23 @@ import android.preference.PreferenceFragment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.Toast;
 
+import de.robv.android.xposed.XposedHelpers;
 import me.hellojuly.qq.luckymoney.activity.MessageReceiverActivity;
 import me.hellojuly.qq.luckymoney.activity.MessageSenderActivity;
+
+import static de.robv.android.xposed.XposedHelpers.callMethod;
+import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
+import static de.robv.android.xposed.XposedHelpers.findClass;
 
 public class SettingsActivity extends AppCompatActivity implements View.OnClickListener {
 
     private SettingsFragment mSettingsFragment;
+    private EditText et_troopNumber;
 
 
     @Override
@@ -35,6 +44,8 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
 
         findViewById(R.id.btn_fromServiceMsg).setOnClickListener(this);
         findViewById(R.id.btn_toServiceMsg).setOnClickListener(this);
+        findViewById(R.id.btn_joinTroop).setOnClickListener(this);
+        et_troopNumber = (EditText) findViewById(R.id.et_troopNumber);
 
         checkPermission();
     }
@@ -82,9 +93,21 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
             case R.id.btn_toServiceMsg:
                 startActivity(new Intent(this, MessageSenderActivity.class));
                 break;
+            case R.id.btn_joinTroop:
+                joinTroop();
+                break;
         }
     }
 
+    private void joinTroop() {
+        int optStat = 31;
+        String content = "我是xxx";
+        String troopNumber = et_troopNumber.getText().toString().trim();
+        joinTroopXposed(0, null, content, troopNumber, optStat, null);
+    }
+
+    private void joinTroopXposed(int k_i, String k_str, String content, String troopNumber, int optStat, String picUrl) {
+    }
 
     /**
      * A placeholder fragment containing a settings view.
