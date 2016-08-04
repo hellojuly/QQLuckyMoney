@@ -12,8 +12,6 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.text.TextUtils;
-import android.widget.Toast;
 
 import org.json.JSONObject;
 
@@ -34,6 +32,7 @@ import me.hellojuly.qq.luckymoney.bean.ServiceCmd;
 import me.hellojuly.qq.luckymoney.bean.ToServiceMsg;
 import me.hellojuly.qq.luckymoney.db.DatabaseContext;
 import me.hellojuly.qq.luckymoney.db.ServiceMsgSQLiteHelper;
+import me.hellojuly.xposedhelper.utils.HidePackageUtil;
 
 import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
@@ -179,7 +178,6 @@ public class Main implements IXposedHookLoadPackage {
 
         );
 
-
         findAndHookConstructor("mqq.app.TicketManagerImpl", loadPackageParam.classLoader, "mqq.app.AppRuntime", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -187,25 +185,13 @@ public class Main implements IXposedHookLoadPackage {
             }
         });
 
-
         findAndHookConstructor("com.tencent.mobileqq.app.HotChatManager", loadPackageParam.classLoader, "com.tencent.mobileqq.app.QQAppInterface", new
-                        XC_MethodHook() {
-                            @Override
-                            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                                HotChatManager = param.thisObject;
-
-//                        Object object = param.args[0];
-//                        XposedBridge.log("--------------------------- Constructor HotChatManager null22 ---------------------------");
-//                        if (object == null && QQAppInterface == null) {
-//                            XposedBridge.log("--------------------------- Constructor HotChatManager null22 ---------------------------");
-//                        } else {
-//                            QQAppInterface = param.thisObject;
-//                            addFriendVerifyActivity = XposedHelpers.newInstance(findClass("com.tencent.mobileqq.activity.AddFriendVerifyActivity", loadPackageParam.classLoader));
-//                            troopHandler = XposedHelpers.newInstance(findClass("com.tencent.mobileqq.app.TroopHandler", loadPackageParam.classLoader), QQAppInterface);
-//                        }
-                            }
-                        }
-
+                XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        HotChatManager = param.thisObject;
+                    }
+                }
         );
 
         findAndHookMethod("com.tencent.mobileqq.pluginsdk.PluginProxyActivity", loadPackageParam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
@@ -228,7 +214,6 @@ public class Main implements IXposedHookLoadPackage {
                         }
                     }
                 }
-
         );
 
         //设置红包为已领取
@@ -250,7 +235,6 @@ public class Main implements IXposedHookLoadPackage {
                         setObjectField(param.args[1], "issend", issend);
                     }
                 }
-
         );
     }
 
@@ -260,7 +244,7 @@ public class Main implements IXposedHookLoadPackage {
 
         if (loadPackageParam.packageName.equals(QQ_PACKAGE_NAME)) {
             XposedBridge.log("packageName=" + loadPackageParam.packageName);
-            hideModule(loadPackageParam);
+            HidePackageUtil.hideModule(loadPackageParam, "hellojuly");
 
             int ver = Build.VERSION.SDK_INT;
             if (ver < 21) {
@@ -333,15 +317,12 @@ public class Main implements IXposedHookLoadPackage {
                 new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-
                         int k_i = (int) param.args[0];
                         String k_str = (String) param.args[1];
                         String content = (String) param.args[2];
                         String troopNumber = (String) param.args[3];
                         int optStat = (int) param.args[4];
                         String picUrl = (String) param.args[5];
-
-
                     }
                 });
     }
@@ -391,123 +372,6 @@ public class Main implements IXposedHookLoadPackage {
                     }
                 });
     }
-
-    /**
-     * 将此APP从列表中隐藏
-     *
-     * @param loadPackageParam
-     */
-    private void hideModule(XC_LoadPackage.LoadPackageParam loadPackageParam) {
-        findAndHookMethod("android.app.ApplicationPackageManager", loadPackageParam.classLoader, "getInstalledApplications", int.class, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                List<ApplicationInfo> applicationList = (List) param.getResult();
-                List<ApplicationInfo> resultapplicationList = new ArrayList<>();
-                for (ApplicationInfo applicationInfo : applicationList) {
-                    String packageName = applicationInfo.packageName;
-                    if (isTarget(packageName)) {
-                        log("Hid package: " + packageName);
-                    } else {
-                        resultapplicationList.add(applicationInfo);
-                    }
-                }
-                param.setResult(resultapplicationList);
-            }
-        });
-        findAndHookMethod("android.app.ApplicationPackageManager", loadPackageParam.classLoader, "getInstalledPackages", int.class, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                List<PackageInfo> packageInfoList = (List) param.getResult();
-                List<PackageInfo> resultpackageInfoList = new ArrayList<>();
-
-                for (PackageInfo packageInfo : packageInfoList) {
-                    String packageName = packageInfo.packageName;
-                    if (isTarget(packageName)) {
-                        log("Hid package: " + packageName);
-                    } else {
-                        resultpackageInfoList.add(packageInfo);
-                    }
-                }
-                param.setResult(resultpackageInfoList);
-            }
-        });
-        findAndHookMethod("android.app.ApplicationPackageManager", loadPackageParam.classLoader, "getPackageInfo", String.class, int.class, new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                String packageName = (String) param.args[0];
-                if (isTarget(packageName)) {
-                    param.args[0] = QQ_PACKAGE_NAME;
-                    log("Fake package: " + packageName + " as " + QQ_PACKAGE_NAME);
-                }
-            }
-        });
-        findAndHookMethod("android.app.ApplicationPackageManager", loadPackageParam.classLoader, "getApplicationInfo", String.class, int.class, new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                String packageName = (String) param.args[0];
-                if (isTarget(packageName)) {
-                    param.args[0] = QQ_PACKAGE_NAME;
-                    log("Fake package: " + packageName + " as " + QQ_PACKAGE_NAME);
-                }
-            }
-        });
-        findAndHookMethod("android.app.ActivityManager", loadPackageParam.classLoader, "getRunningServices", int.class, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                List<RunningServiceInfo> serviceInfoList = (List) param.getResult();
-                List<RunningServiceInfo> resultList = new ArrayList<>();
-
-                for (RunningServiceInfo runningServiceInfo : serviceInfoList) {
-                    String serviceName = runningServiceInfo.process;
-                    if (isTarget(serviceName)) {
-                        log("Hid service: " + serviceName);
-                    } else {
-                        resultList.add(runningServiceInfo);
-                    }
-                }
-                param.setResult(resultList);
-            }
-        });
-        findAndHookMethod("android.app.ActivityManager", loadPackageParam.classLoader, "getRunningTasks", int.class, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                List<RunningTaskInfo> serviceInfoList = (List) param.getResult();
-                List<RunningTaskInfo> resultList = new ArrayList<>();
-
-                for (RunningTaskInfo runningTaskInfo : serviceInfoList) {
-                    String taskName = runningTaskInfo.baseActivity.flattenToString();
-                    if (isTarget(taskName)) {
-                        log("Hid task: " + taskName);
-                    } else {
-                        resultList.add(runningTaskInfo);
-                    }
-                }
-                param.setResult(resultList);
-            }
-        });
-        findAndHookMethod("android.app.ActivityManager", loadPackageParam.classLoader, "getRunningAppProcesses", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                List<RunningAppProcessInfo> runningAppProcessInfos = (List) param.getResult();
-                List<RunningAppProcessInfo> resultList = new ArrayList<>();
-
-                for (RunningAppProcessInfo runningAppProcessInfo : runningAppProcessInfos) {
-                    String processName = runningAppProcessInfo.processName;
-                    if (isTarget(processName)) {
-                        log("Hid process: " + processName);
-                    } else {
-                        resultList.add(runningAppProcessInfo);
-                    }
-                }
-                param.setResult(resultList);
-            }
-        });
-    }
-
-    private boolean isTarget(String name) {
-        return name.contains("hellojuly") || name.contains("xposed");
-    }
-
 
     private int getGroupType() throws IllegalAccessException {
         int grouptype = 0;
