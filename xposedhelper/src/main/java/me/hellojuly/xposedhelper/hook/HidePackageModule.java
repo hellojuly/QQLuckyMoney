@@ -1,4 +1,4 @@
-package me.hellojuly.xposedhelper.utils;
+package me.hellojuly.xposedhelper.hook;
 
 import android.app.ActivityManager;
 import android.content.pm.ApplicationInfo;
@@ -20,7 +20,7 @@ import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
  * Date: 2016/8/4.
  * Time: 15:39
  */
-public class HidePackageUtil {
+public class HidePackageModule {
 
     private static String mHidePackageName = "";
 
@@ -29,7 +29,7 @@ public class HidePackageUtil {
      *
      * @param loadPackageParam
      */
-    public static void hideModule(XC_LoadPackage.LoadPackageParam loadPackageParam, String packageName) {
+    public static void hide(XC_LoadPackage.LoadPackageParam loadPackageParam, String packageName) {
         mHidePackageName = packageName;
 
         //获取应用信息

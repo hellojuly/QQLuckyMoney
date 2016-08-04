@@ -108,10 +108,19 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
         int optStat = 31;
         String content = "我是xxx";
         String troopNumber = et_troopNumber.getText().toString().trim();
-        joinTroopXposed(0, null, content, troopNumber, optStat, null);
-    }
 
-    private void joinTroopXposed(int k_i, String k_str, String content, String troopNumber, int optStat, String picUrl) {
+        Bundle bundle = new Bundle();
+        bundle.putString(Constants.KEY_TROOP_NUMBER, troopNumber);
+        bundle.putString(Constants.KEY_TROOP_CONTENT, content);
+        bundle.putInt(Constants.KEY_TROOP_OPT_STAT, optStat);
+        bundle.putInt(Constants.KEY_TROOP_K_I, 0);
+        bundle.putString(Constants.KEY_TROOP_K_STR, null);
+        bundle.putString(Constants.KEY_TROOP_PIC_URL, null);
+
+        Intent intent = new Intent();
+        intent.setAction(Constants.ACTION_TROOP_JOIN);
+        intent.putExtras(bundle);
+        sendBroadcast(intent);
     }
 
     /**

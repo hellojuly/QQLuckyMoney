@@ -1,12 +1,8 @@
 package me.hellojuly.qq.luckymoney;
 
-import android.app.ActivityManager.RunningAppProcessInfo;
-import android.app.ActivityManager.RunningServiceInfo;
-import android.app.ActivityManager.RunningTaskInfo;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -15,9 +11,7 @@ import android.text.TextUtils;
 
 import org.json.JSONObject;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -32,7 +26,8 @@ import me.hellojuly.qq.luckymoney.bean.ServiceCmd;
 import me.hellojuly.qq.luckymoney.bean.ToServiceMsg;
 import me.hellojuly.qq.luckymoney.db.DatabaseContext;
 import me.hellojuly.qq.luckymoney.db.ServiceMsgSQLiteHelper;
-import me.hellojuly.xposedhelper.utils.HidePackageUtil;
+import me.hellojuly.xposedhelper.hook.BroadcastReceiverModule;
+import me.hellojuly.xposedhelper.hook.HidePackageModule;
 
 import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
@@ -73,7 +68,29 @@ public class Main implements IXposedHookLoadPackage {
     Object addFriendVerifyActivity;
     Object troopHandler;
 
-    boolean isJoin = true;
+    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            Bundle bundle = intent.getExtras();
+            switch (action) {
+                case Constants.ACTION_TROOP_JOIN:
+                    String troopNumber = bundle.getString(Constants.KEY_TROOP_NUMBER);
+                    String content = bundle.getString(Constants.KEY_TROOP_CONTENT);
+                    int optStat = bundle.getInt(Constants.KEY_TROOP_OPT_STAT, 31);
+                    String picUrl = bundle.getString(Constants.KEY_TROOP_PIC_URL);
+                    int k_i = bundle.getInt(Constants.KEY_TROOP_K_I, 0);
+                    String k_str = bundle.getString(Constants.KEY_TROOP_K_STR);
+
+                    runJoinTroop(troopNumber, content, optStat, picUrl, k_i, k_str);
+                    break;
+            }
+        }
+    };
+
+    private static final String[] mActions = {
+            Constants.ACTION_TROOP_JOIN
+    };
 
     private void dohook(final XC_LoadPackage.LoadPackageParam loadPackageParam) {
 
@@ -96,8 +113,6 @@ public class Main implements IXposedHookLoadPackage {
                             istroop = (int) getObjectField(param.args[1], "istroop");
                             selfuin = getObjectField(param.args[1], "selfuin").toString();
                         }
-
-                        runJoinTroop();
                     }
                 }
 
@@ -244,13 +259,14 @@ public class Main implements IXposedHookLoadPackage {
 
         if (loadPackageParam.packageName.equals(QQ_PACKAGE_NAME)) {
             XposedBridge.log("packageName=" + loadPackageParam.packageName);
-            HidePackageUtil.hideModule(loadPackageParam, "hellojuly");
+            HidePackageModule.hide(loadPackageParam, "hellojuly");
 
             int ver = Build.VERSION.SDK_INT;
             if (ver < 21) {
                 findAndHookMethod("com.tencent.common.app.BaseApplicationImpl", loadPackageParam.classLoader, "onCreate", new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        BroadcastReceiverModule.registerReceiver(loadPackageParam, mBroadcastReceiver, mActions);
                         dohook(loadPackageParam);
                         hookQQSend(loadPackageParam);
                         hookAddFriend(loadPackageParam);
@@ -258,17 +274,12 @@ public class Main implements IXposedHookLoadPackage {
                     }
                 });
             } else {
+                BroadcastReceiverModule.registerReceiver(loadPackageParam, mBroadcastReceiver, mActions);
                 dohook(loadPackageParam);
                 hookQQSend(loadPackageParam);
                 hookAddFriend(loadPackageParam);
                 hookAccount(loadPackageParam);
             }
-        }
-
-        //hook自己
-        if (loadPackageParam.packageName.equals(SELF_PACKAGE_NAME)) {
-            XposedBridge.log("packageName=" + loadPackageParam.packageName);
-            hookSelf(loadPackageParam);
         }
 
 //        if (loadPackageParam.packageName.equals(WECHAT_PACKAGE_NAME)) {
@@ -301,42 +312,13 @@ public class Main implements IXposedHookLoadPackage {
 
     }
 
-    /**
-     * hook 自己
-     *
-     * @param loadPackageParam
-     */
-    private void hookSelf(final XC_LoadPackage.LoadPackageParam loadPackageParam) {
-        findAndHookMethod("me.hellojuly.qq.luckymoney.SettingsActivity", loadPackageParam.classLoader, "joinTroopXposed",
-                int.class,
-                String.class,
-                String.class,
-                String.class,
-                int.class,
-                String.class,
-                new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        int k_i = (int) param.args[0];
-                        String k_str = (String) param.args[1];
-                        String content = (String) param.args[2];
-                        String troopNumber = (String) param.args[3];
-                        int optStat = (int) param.args[4];
-                        String picUrl = (String) param.args[5];
-                    }
-                });
-    }
-
-    private void runJoinTroop() {
-        if (!isJoin) return;
-
-        String troopNumber = "548819528";
-        String content = "我是xxx";
-        int optStat = 31;
-        String picUrl = null;
-        int k_i = 0;
-        String k_str = null;
-
+    private void runJoinTroop(String troopNumber, String content, int optStat, String picUrl, int k_i, String k_str) {
+//        String troopNumber = "548819528";
+//        String content = "我是xxx";
+//        int optStat = 31;
+//        String picUrl = null;
+//        int k_i = 0;
+//        String k_str = null;
 
         String account = (String) callMethod(QQAppInterface, "getAccount");
         XposedBridge.log("account=" + account);
@@ -346,7 +328,6 @@ public class Main implements IXposedHookLoadPackage {
         }
         byte[] bytes = (byte[]) callMethod(addFriendVerifyActivity, "a", k_i, k_str, content, account, Long.parseLong(troopNumber));
         callMethod(troopHandler, "a", troopNumber, content, optStat, bytes, picUrl);
-        isJoin = false;
     }
 
     /**
