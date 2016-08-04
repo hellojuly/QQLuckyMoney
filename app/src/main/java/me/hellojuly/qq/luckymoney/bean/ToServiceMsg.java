@@ -17,6 +17,7 @@ import java.util.Set;
  */
 public class ToServiceMsg {
 
+    public int id;
     public int toVersion;
     public int appId;
     public int appSeq;
@@ -113,6 +114,7 @@ public class ToServiceMsg {
         public static ToServiceMsg toBeanValues(Cursor cursor) {
             ToServiceMsg fromServiceMsg = new ToServiceMsg();
             if (cursor == null) return fromServiceMsg;
+            fromServiceMsg.id = cursor.getInt(cursor.getColumnIndex(Impl._ID));
             fromServiceMsg.toVersion = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_TO_VERSION));
             fromServiceMsg.appId = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_APP_ID));
             fromServiceMsg.appSeq = cursor.getInt(cursor.getColumnIndex(Impl.COLUMN_APP_SEQ));

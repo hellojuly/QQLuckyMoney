@@ -9,14 +9,15 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.os.Environment;
+import android.util.Log;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.robv.android.xposed.XposedBridge;
 import me.hellojuly.qq.luckymoney.bean.FromServiceMsg;
+import me.hellojuly.qq.luckymoney.bean.MSFCmd;
+import me.hellojuly.qq.luckymoney.bean.ServiceCmd;
 import me.hellojuly.qq.luckymoney.bean.ToServiceMsg;
 
 /**
@@ -30,6 +31,8 @@ public class ServiceMsgSQLiteHelper extends SQLiteOpenHelper {
     public static final String DB_NAME = "ServiceMsg.db";
     public static final String DB_TABLE_FROM = "FromService";//服务器下发的数据
     public static final String DB_TABLE_TO = "ToService";//发送到服务器的数据
+    public static final String DB_TABLE_SERVICE_CMD = "ServiceCmd";//service指令表
+    public static final String DB_TABLE_MSF_CMD = "MSFCmd";//msf指令表
     private static final int DB_VERSION = 1;
 
     public ServiceMsgSQLiteHelper(Context context) {
@@ -54,6 +57,8 @@ public class ServiceMsgSQLiteHelper extends SQLiteOpenHelper {
     private void upgradeTo(SQLiteDatabase db, int version) {
         switch (version) {
             case 1:
+                createMSFCmdTable(db);
+                createServiceCmdTable(db);
                 createFromServiceTable(db);
                 createToServiceTable(db);
                 break;
@@ -129,6 +134,35 @@ public class ServiceMsgSQLiteHelper extends SQLiteOpenHelper {
         }
     }
 
+    private void createServiceCmdTable(SQLiteDatabase db) {
+        try {
+            db.execSQL("CREATE TABLE IF NOT EXISTS " + DB_TABLE_SERVICE_CMD + "(" +
+                    ServiceCmd.Impl._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    ServiceCmd.Impl.COLUMN_NAME + " TEXT unique, " +
+                    ServiceCmd.Impl.COLUMN_NEED_RESP + " INTEGER, " +
+                    ServiceCmd.Impl.COLUMN_FILTER + " INTEGER, " +
+                    ServiceCmd.Impl.COLUMN_MEMO + " TEXT"
+                    + " );");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void createMSFCmdTable(SQLiteDatabase db) {
+        try {
+            db.execSQL("CREATE TABLE IF NOT EXISTS " + DB_TABLE_MSF_CMD + "(" +
+                    MSFCmd.Impl._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    MSFCmd.Impl.COLUMN_NAME + " TEXT unique, " +
+                    MSFCmd.Impl.COLUMN_NEED_RESP + " INTEGER, " +
+                    MSFCmd.Impl.COLUMN_FILTER + " INTEGER, " +
+                    MSFCmd.Impl.COLUMN_MEMO + " TEXT"
+                    + " );");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * 查询消息列表(接收消息)
@@ -177,12 +211,35 @@ public class ServiceMsgSQLiteHelper extends SQLiteOpenHelper {
     }
 
     /**
+     * 插入数据
+     *
+     * @param msfCmd
+     */
+    public void insert(MSFCmd msfCmd) {
+        getWritableDatabase().insert(DB_TABLE_MSF_CMD, null, MSFCmd.Impl.toContentValues(msfCmd));
+    }
+
+    /**
+     * 插入数据
+     *
+     * @param serviceCmd
+     */
+    public void insert(ServiceCmd serviceCmd) {
+        getWritableDatabase().insert(DB_TABLE_SERVICE_CMD, null, ServiceCmd.Impl.toContentValues(serviceCmd));
+    }
+
+    /**
      * 查询消息列表(接收)
      *
      * @return
      */
     public Cursor queryReceiverMsg() {
-        return getReadableDatabase().rawQuery("select * from " + DB_TABLE_FROM + " order by time desc", null);
+        return getReadableDatabase().rawQuery(
+                "select * from " + DB_TABLE_FROM +
+                        " left join " + DB_TABLE_SERVICE_CMD +
+                        " on FromService.serviceCmd=ServiceCmd.name" +
+                        " where ServiceCmd.filter=0" +
+                        " order by time desc", null);
     }
 
     /**
@@ -191,7 +248,12 @@ public class ServiceMsgSQLiteHelper extends SQLiteOpenHelper {
      * @return
      */
     public Cursor querySendMsg() {
-        return getReadableDatabase().rawQuery("select * from " + DB_TABLE_TO + " where " + ToServiceMsg.Impl.COLUMN_NEED_RESP + "=1" + " order by time desc", null);
+        return getReadableDatabase().rawQuery(
+                "select * from " + DB_TABLE_TO +
+                        " left join " + DB_TABLE_SERVICE_CMD +
+                        " on ToService.serviceCmd=ServiceCmd.name " +
+                        " where ToService.needResp=1 and ServiceCmd.filter=0" +
+                        " order by _id desc", null);
     }
 
     /**
@@ -237,6 +299,17 @@ public class ServiceMsgSQLiteHelper extends SQLiteOpenHelper {
                         FromServiceMsg.Impl.COLUMN_APP_SEQ + "=" + appSeq,
                 null);
         return convertToSenderMsg(cursor);
+    }
+
+    /**
+     * 过滤ServiceCmd指令
+     * @param cmd
+     */
+    public void updateServiceCmdFilter(String cmd) {
+        String sql = "update " + DB_TABLE_SERVICE_CMD +
+                " set " + ServiceCmd.Impl.COLUMN_FILTER + "=1 where " + ServiceCmd.Impl.COLUMN_NAME + "='" + cmd +"'";
+        getReadableDatabase().rawQuery(sql, null);
+        Log.v("", sql);
     }
 
 }

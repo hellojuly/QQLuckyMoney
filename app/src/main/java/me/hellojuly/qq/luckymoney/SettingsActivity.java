@@ -22,6 +22,7 @@ import android.widget.Toast;
 import de.robv.android.xposed.XposedHelpers;
 import me.hellojuly.qq.luckymoney.activity.MessageReceiverActivity;
 import me.hellojuly.qq.luckymoney.activity.MessageSenderActivity;
+import me.hellojuly.qq.luckymoney.activity.MessageSenderTableActivity;
 
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
@@ -45,6 +46,7 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
         findViewById(R.id.btn_fromServiceMsg).setOnClickListener(this);
         findViewById(R.id.btn_toServiceMsg).setOnClickListener(this);
         findViewById(R.id.btn_joinTroop).setOnClickListener(this);
+        findViewById(R.id.btn_senderTable).setOnClickListener(this);
         et_troopNumber = (EditText) findViewById(R.id.et_troopNumber);
 
         checkPermission();
@@ -95,6 +97,9 @@ public class SettingsActivity extends AppCompatActivity implements View.OnClickL
                 break;
             case R.id.btn_joinTroop:
                 joinTroop();
+                break;
+            case R.id.btn_senderTable:
+                startActivity(new Intent(this, MessageSenderTableActivity.class));
                 break;
         }
     }

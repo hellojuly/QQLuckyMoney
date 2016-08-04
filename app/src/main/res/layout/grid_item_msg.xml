@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="18dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/tv_id"
+        style="@style/GridViewItem"
+        android:layout_width="30dp"
+        tools:text="1" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_time"
+        style="@style/GridViewItem"
+        android:layout_width="120dp"
+        tools:text="1470121650686" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_appSeq"
+        style="@style/GridViewItem"
+        android:layout_width="40dp"
+        tools:text="48799" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_serviceCmd"
+        style="@style/GridViewItem"
+        android:layout_width="300dp"
+        tools:text="ServiceCmd" />
+
+    <View style="@style/GridViewSpace" />
+
+
+    <TextView
+        android:id="@+id/tv_msfCmd"
+        style="@style/GridViewItem"
+        android:layout_width="300dp"
+        tools:text="msfCmd" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_extraData"
+        style="@style/GridViewItem"
+        android:layout_width="600dp"
+        tools:text="extraData" />
+
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_attributes"
+        style="@style/GridViewItem"
+        android:layout_width="600dp"
+        tools:text="attributes" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_serviceName"
+        style="@style/GridViewItem"
+        android:layout_width="220dp"
+        tools:text="serviceName" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_toVersion"
+        style="@style/GridViewItem"
+        android:layout_width="20dp"
+        tools:text="toVersion" />
+
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_appId"
+        style="@style/GridViewItem"
+        android:layout_width="72dp"
+        tools:text="appId" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_ssoSeq"
+        style="@style/GridViewItem"
+        android:layout_width="30dp"
+        tools:text="ssoSeq" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_uin"
+        style="@style/GridViewItem"
+        android:layout_width="100dp"
+        tools:text="uin" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_uinType"
+        style="@style/GridViewItem"
+        android:layout_width="30dp"
+        tools:text="uinType" />
+
+    <View style="@style/GridViewSpace" />
+
+    <TextView
+        android:id="@+id/tv_timeout"
+        style="@style/GridViewItem"
+        android:layout_width="120dp"
+        tools:text="3000" />
+
+
+</LinearLayout>
